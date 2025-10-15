@@ -1,9 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { GradingResult, ImagePart } from '../types';
 
-// Fix: Corrected the Gemini API initialization to use process.env.API_KEY as per the guidelines.
-// This resolves the 'import.meta.env' TypeScript error and aligns with best practices.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// FIX: Use process.env.API_KEY as per @google/genai coding guidelines.
+const apiKey = process.env.API_KEY;
+
+// Khởi tạo AI client với API key. Nếu key không tồn tại, truyền chuỗi rỗng để tránh crash khi tải module.
+// Lỗi sẽ được xử lý khi người dùng thực hiện hành động.
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 const model = 'gemini-2.5-flash';
 
@@ -51,7 +54,12 @@ const gradingSchema = {
 };
 
 export const gradeQuiz = async (image: ImagePart, subject: string): Promise<GradingResult> => {
-  // Fix: Removed the API key check, as the guidelines specify to assume it's always available.
+  // Thêm kiểm tra ở đây để đưa ra thông báo lỗi thân thiện với người dùng
+  if (!apiKey) {
+    // FIX: Updated error message to reflect the change to API_KEY.
+    throw new Error("Lỗi Cấu Hình: API_KEY chưa được thiết lập. Vui lòng kiểm tra lại biến môi trường của bạn.");
+  }
+
   const prompt = `Bạn là một giáo viên AI chuyên gia về môn ${subject}. Nhiệm vụ của bạn là chấm điểm bài kiểm tra trong hình ảnh được cung cấp. Dựa trên kiến thức chuyên môn của bạn, hãy phân tích từng câu hỏi và câu trả lời của học sinh.
   
   QUY TRÌNH CHẤM ĐIỂM:
