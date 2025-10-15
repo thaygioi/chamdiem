@@ -1,0 +1,7 @@
+{
+  "name": "Trợ lý Chấm điểm AI",
+  "description": "Một ứng dụng web React cho phép người dùng tự động chấm điểm các bài kiểm tra bằng cách tải lên hoặc chụp ảnh bài kiểm tra. Ứng dụng sử dụng API Gemini của Google để phân tích hình ảnh, tự động xác định đáp án đúng dựa trên môn học và cung cấp kết quả chi tiết.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
