@@ -14,26 +14,32 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose }) => 
   const [error, setError] = useState<string | null>(null);
 
   const startCamera = useCallback(async () => {
+    // Stop any existing stream before starting a new one
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
       });
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
+      setError(null);
     } catch (err) {
       console.error("Lỗi truy cập camera:", err);
-      setError("Không thể truy cập camera. Vui lòng cấp quyền và thử lại.");
+      setError("Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập trong cài đặt trình duyệt của bạn.");
     }
-  }, []);
+  }, [stream]);
 
   useEffect(() => {
     startCamera();
     return () => {
       stream?.getTracks().forEach(track => track.stop());
     };
-  }, [startCamera, stream]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
@@ -42,16 +48,21 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose }) => 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
-      context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-      const dataUrl = canvas.toDataURL('image/jpeg');
-      setCapturedImage(dataUrl);
+      if (context) {
+        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        setCapturedImage(dataUrl);
+        // Stop the stream after capture
+        stream?.getTracks().forEach(track => track.stop());
+      }
     }
   };
 
   const handleRetake = () => {
     setCapturedImage(null);
+    startCamera();
   };
-  
+
   const handleUsePhoto = () => {
     if (capturedImage && canvasRef.current) {
       canvasRef.current.toBlob((blob) => {
@@ -64,37 +75,69 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose }) => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50">
-      <div className="bg-slate-800 p-4 rounded-lg shadow-2xl w-full max-w-3xl aspect-video relative flex flex-col justify-center items-center">
-        <button onClick={onClose} className="absolute top-2 right-2 text-white bg-slate-700/50 hover:bg-slate-600/50 rounded-full p-2 z-10">
-          <XIcon className="w-6 h-6" />
-        </button>
+    <div className="fixed inset-0 bg-black z-50 flex flex-col justify-center items-center">
+      <div className="relative w-full h-full flex items-center justify-center">
+        {error && (
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+                <p className="text-white text-center bg-black/50 p-4 rounded-lg">{error}</p>
+            </div>
+        )}
 
-        {error && <p className="text-red-400">{error}</p>}
+        {/* Video Preview or Captured Image */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          className={`w-full h-full object-cover transition-opacity duration-300 ${capturedImage ? 'opacity-0' : 'opacity-100'}`}
+        />
+        {capturedImage && (
+          <img
+            src={capturedImage}
+            alt="Ảnh đã chụp"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+         <canvas ref={canvasRef} className="hidden" />
+      </div>
+      
+      {/* Controls Overlay */}
+      <div className="absolute inset-0 flex flex-col justify-between p-4 sm:p-6">
+        {/* Top Control: Close Button */}
+        <div className="flex justify-end">
+            <button
+                onClick={onClose}
+                className="p-2.5 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                aria-label="Đóng camera"
+            >
+                <XIcon className="w-6 h-6" />
+            </button>
+        </div>
         
-        {!capturedImage ? (
-          <>
-            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-contain rounded-md" />
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-              <button onClick={handleCapture} className="p-4 bg-white rounded-full shadow-lg hover:bg-slate-200 transition">
-                <CameraIcon className="w-8 h-8 text-slate-700" />
+        {/* Bottom Controls */}
+        <div className="pb-4">
+          {!capturedImage ? (
+            // Capture Button
+            <div className="flex justify-center">
+              <button
+                onClick={handleCapture}
+                className="w-16 h-16 rounded-full bg-white flex items-center justify-center ring-4 ring-white/30 hover:ring-white/50 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white"
+                aria-label="Chụp ảnh"
+              >
+                <div className="w-14 h-14 rounded-full bg-white active:bg-slate-200 border-2 border-black"></div>
               </button>
             </div>
-          </>
-        ) : (
-          <>
-            <img src={capturedImage} alt="Captured" className="w-full h-full object-contain rounded-md" />
-            <div className="absolute bottom-4 flex gap-4">
-              <button onClick={handleRetake} className="flex items-center gap-2 px-6 py-3 bg-slate-600 text-white rounded-full shadow-lg hover:bg-slate-500 transition font-semibold">
+          ) : (
+            // Retake and Use Photo Buttons
+            <div className="flex justify-around items-center">
+              <button onClick={handleRetake} className="flex items-center gap-2 px-6 py-3 text-white rounded-full font-semibold text-lg hover:bg-white/10 transition">
                 <RefreshIcon className="w-6 h-6" /> Chụp lại
               </button>
-              <button onClick={handleUsePhoto} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-500 transition font-semibold">
-                <CheckIcon className="w-6 h-6" /> Sử dụng ảnh này
+              <button onClick={handleUsePhoto} className="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-full font-semibold text-lg hover:bg-blue-500 transition shadow-lg">
+                <CheckIcon className="w-6 h-6" /> Sử dụng ảnh
               </button>
             </div>
-          </>
-        )}
-        <canvas ref={canvasRef} className="hidden" />
+          )}
+        </div>
       </div>
     </div>
   );
