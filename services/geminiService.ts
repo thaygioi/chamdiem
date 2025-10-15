@@ -1,13 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { GradingResult, ImagePart } from '../types';
 
-// FIX: Use process.env.API_KEY as per @google/genai coding guidelines.
-const apiKey = process.env.API_KEY;
-
-// Khởi tạo AI client với API key. Nếu key không tồn tại, truyền chuỗi rỗng để tránh crash khi tải module.
-// Lỗi sẽ được xử lý khi người dùng thực hiện hành động.
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
-
 const model = 'gemini-2.5-flash';
 
 export const fileToGenerativePart = async (file: File): Promise<ImagePart> => {
@@ -53,12 +46,12 @@ const gradingSchema = {
   required: ["totalQuestions", "correctAnswers", "score", "gradePercentage", "feedback", "results"],
 };
 
-export const gradeQuiz = async (image: ImagePart, subject: string): Promise<GradingResult> => {
-  // Thêm kiểm tra ở đây để đưa ra thông báo lỗi thân thiện với người dùng
-  if (!apiKey) {
-    // FIX: Updated error message to reflect the change to API_KEY.
-    throw new Error("Lỗi Cấu Hình: API_KEY chưa được thiết lập. Vui lòng kiểm tra lại biến môi trường của bạn.");
+export const gradeQuiz = async (image: ImagePart, subject: string, apiKey: string): Promise<GradingResult> => {
+   if (!apiKey) {
+    throw new Error("Lỗi Cấu Hình: API Key chưa được cung cấp. Vui lòng nhập API Key của bạn.");
   }
+  
+  const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `Bạn là một giáo viên AI chuyên gia về môn ${subject}. Nhiệm vụ của bạn là chấm điểm bài kiểm tra trong hình ảnh được cung cấp. Dựa trên kiến thức chuyên môn của bạn, hãy phân tích từng câu hỏi và câu trả lời của học sinh.
   

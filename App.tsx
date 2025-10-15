@@ -8,6 +8,7 @@ import ResultsDisplay from './components/ResultsDisplay';
 import Loader from './components/Loader';
 import { SparklesIcon } from './components/icons';
 import Footer from './components/Footer';
+import ApiKeyInput from './components/ApiKeyInput';
 
 const CameraCapture = lazy(() => import('./components/CameraCapture'));
 
@@ -25,6 +26,7 @@ const App: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [subject, setSubject] = useState<string>('Kiến thức chung');
+  const [apiKey, setApiKey] = useState<string>('');
   const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +49,10 @@ const App: React.FC = () => {
   };
 
   const handleGradeQuiz = async () => {
+    if (!apiKey) {
+      setError('Vui lòng nhập Gemini API Key của bạn.');
+      return;
+    }
     if (!imageFile) {
       setError('Vui lòng tải lên hoặc chụp ảnh bài kiểm tra.');
       return;
@@ -58,7 +64,7 @@ const App: React.FC = () => {
 
     try {
       const imagePart = await fileToGenerativePart(imageFile);
-      const result = await gradeQuiz(imagePart, subject);
+      const result = await gradeQuiz(imagePart, subject, apiKey);
       setGradingResult(result);
     } catch (err) {
       console.error(err);
@@ -80,7 +86,12 @@ const App: React.FC = () => {
       <main className="w-full max-w-3xl flex flex-col gap-8 mt-8">
         <div className="bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-3xl shadow-lg border border-slate-200/80">
           <div className="mb-8">
-            <StepTitle number={1} title="Chọn môn học" />
+             <StepTitle number={1} title="Nhập Gemini API Key" />
+             <ApiKeyInput value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+          </div>
+
+          <div className="mb-8">
+            <StepTitle number={2} title="Chọn môn học" />
             <SubjectSelector
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -88,13 +99,13 @@ const App: React.FC = () => {
           </div>
           
           <div>
-            <StepTitle number={2} title="Tải lên hoặc Chụp ảnh" />
+            <StepTitle number={3} title="Tải lên hoặc Chụp ảnh" />
             <ImageUploader onImageUpload={handleImageSelected} onCameraClick={() => setIsCameraOpen(true)} imageUrl={imageUrl} />
           </div>
           
           <button
             onClick={handleGradeQuiz}
-            disabled={isLoading || !imageFile}
+            disabled={isLoading || !imageFile || !apiKey}
             className="w-full mt-8 bg-gradient-to-r from-blue-600 to-indigo-700 hover:shadow-xl hover:opacity-95 disabled:from-slate-400 disabled:to-slate-400 disabled:shadow-none disabled:opacity-70 text-white font-bold py-4 px-4 rounded-xl flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 text-lg"
           >
             {isLoading ? (
