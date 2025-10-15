@@ -62,7 +62,8 @@ const App: React.FC = () => {
       setGradingResult(result);
     } catch (err) {
       console.error(err);
-      setError('Đã xảy ra lỗi khi chấm điểm. Vui lòng thử lại.');
+      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi không xác định khi chấm điểm. Vui lòng thử lại.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

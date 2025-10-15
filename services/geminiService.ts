@@ -1,9 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { GradingResult, ImagePart } from '../types';
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY môi trường biến không được thiết lập.");
-}
+// This check is removed as it crashes the app on load if the env var is not set.
+// The error will be handled gracefully in the component's try/catch block instead.
+// if (!process.env.API_KEY) {
+//   throw new Error("API_KEY môi trường biến không được thiết lập.");
+// }
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -53,6 +55,10 @@ const gradingSchema = {
 };
 
 export const gradeQuiz = async (image: ImagePart, subject: string): Promise<GradingResult> => {
+  if (!process.env.API_KEY) {
+    throw new Error("Chưa cấu hình API Key. Vui lòng thêm biến môi trường API_KEY vào dự án của bạn.");
+  }
+  
   const prompt = `Bạn là một giáo viên AI chuyên gia về môn ${subject}. Nhiệm vụ của bạn là chấm điểm bài kiểm tra trong hình ảnh được cung cấp. Dựa trên kiến thức chuyên môn của bạn, hãy phân tích từng câu hỏi và câu trả lời của học sinh.
   
   QUY TRÌNH CHẤM ĐIỂM:
